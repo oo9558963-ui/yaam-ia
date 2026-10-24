@@ -1,16 +1,119 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
+import json, os
+
 app = Flask(__name__)
-@app.route('/')
+
+PRODUCTS_FILE = "products.json"
+
+def load_products():
+    if os.path.exists(PRODUCTS_FILE):
+        try:
+            with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return [
+        {"id": 1, "nom": "Crème Lèvre Rose", "prix": "3000F", "description": "Rend les lèvres douces, roses et sans taches en 7 jours. 100% naturel, Ouaga."},
+        {"id": 2, "nom": "Savon Éclaircissant", "prix": "2500F", "description": "Anti-taches visage et corps."}
+    ]
+
+def save_products(products):
+    with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(products, f, ensure_ascii=False, indent=2)
+
+products = load_products()
+
+@app.route("/")
 def home():
-    return """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>YAAM IA</title><style>body{margin:0;font-family:Arial;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}h1{font-size:3em}h1 span{color:#ffcc00}.btn{display:block;background:#ffcc00;color:#000;padding:15px;border-radius:50px;text-decoration:none;font-weight:bold;margin:15px 0}</style></head><body><h1>YAAM <span>IA</span></h1><p>L'Intelligence par l'Afrique, pour l'Afrique</p><a href="/chat" class="btn">Entrer dans YAAM IA</a><a href="/chat" class="btn">Parler a YAAM</a><p>Dev par Olivier - Ouaga</p></body></html>"""
-@app.route('/chat')
-def chat():
-    return """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Chat YAAM</title><style>body{margin:0;font-family:Arial;background:#0f0c29;color:white;display:flex;flex-direction:column;height:100vh}.header{background:#302b63;padding:15px;text-align:center}#messages{flex:1;overflow-y:auto;padding:20px}.msg{margin:10px 0;padding:12px;border-radius:18px;max-width:80%}.user{background:#ffcc00;color:#000;margin-left:auto}.ia{background:rgba(255,255,255,.15)} .input-area{display:flex;padding:15px;background:#1a1a3e}input{flex:1;padding:15px;border-radius:30px;border:none}button{margin-left:10px;background:#ffcc00;border:none;border-radius:50%;width:50px;height:50px}</style></head><body><div class="header"><a href="/" style="color:#ffcc00">← YAAM IA</a> Chat</div><div id="messages"><div class="msg ia">Salut Olivier! Je suis YAAM IA, cree a Ouaga. Comment aider?</div></div><div class="input-area"><input id="input" placeholder="Ecris..." onkeypress="if(event.key==='Enter')send()"><button onclick="send()">></button></div><script>async function send(){let i=document.getElementById('input');let t=i.value.trim();if(!t)return;let b=document.getElementById('messages');b.innerHTML+=`<div class='msg user'>${t}</div>`;i.value='';let r=await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t})});let d=await r.json();b.innerHTML+=`<div class='msg ia'>${d.reply}</div>`;b.scrollTop=b.scrollHeight}</script></body></html>"""
-@app.route('/ask', methods=['POST'])
-def ask():
-    d=request.get_json(); m=d.get('message','').lower()
-    if 'salut' in m or 'bonjour' in m: r="Salut! Content de te voir! Je suis YAAM IA, 100% burkinabe!"
-    elif 'qui es tu' in m or 'qui est tu' in m: r="Je suis YAAM IA, l'IA africaine par l'Afrique, pour l'Afrique! Developpe par Olivier a Ouaga!"
-    elif 'olivier' in m: r="Olivier c'est mon createur! Un genie a Ouagadougou!"
-    else: r=f"Tu as dit: {d.get('message')}. Je suis YAAM IA, je t'ecoute!"
-    return jsonify({'reply':r})
+    return render_template_string("""
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>body{background:#0a1931;color:white;font-family:Arial;text-align:center;padding:30px}
+    .btn{background:#ffcc00;color:black;padding:15px 30px;border-radius:30px;text-decoration:none;font-weight:bold;display:block;margin:20px auto;width:260px}
+    </style></head><body>
+    <h1>YAAM IA 🇧🇫</h1>
+    <p>L'Intelligence par l'Afrique, pour l'Afrique</p>
+    <a class="btn" href="/chat">Entrer dans YAAM IA</a>
+    <a class="btn" href="/dashboard">Dashboard Vendeur</a>
+    <p>Produits: {{count}}</p>
+    </body></html>
+    """, count=len(products))
+
+@app.route("/chat")
+def chat_page():
+    return render_template_string("""
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>body{background:#111;color:white;font-family:Arial;padding:10px}
+    #box{height:65vh;overflow-y:auto;border:1px solid #333;padding:10px;border-radius:10px}
+    .msg{padding:10px;margin:5px;border-radius:10px;max-width:85%}
+    .user{background:#ffcc00;color:black;margin-left:auto}
+    .bot{background:#222}
+    input{width:68%;padding:12px;border-radius:20px;border:none}
+    button{padding:12px 18px;border-radius:20px;background:#ffcc00;border:none;font-weight:bold}
+    </style></head><body>
+    <h3>YAAM IA - Vendeuse auto</h3>
+    <div id="box"><div class="msg bot">Salut ! Je suis YAAM IA, de Ouaga. Tu veux crème lèvre rose ?</div></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+    <input id="inp" placeholder="Ecris ici..."><button onclick="send()">Envoyer</button></div>
+    <script>
+    async function send(){
+      let txt=document.getElementById('inp').value; if(!txt) return;
+      let box=document.getElementById('box');
+      box.innerHTML+=`<div class="msg user">${txt}</div>`;
+      document.getElementById('inp').value='';
+      let res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:txt})});
+      let data=await res.json();
+      box.innerHTML+=`<div class="msg bot">${data.reply}</div>`;
+      box.scrollTop=box.scrollHeight;
+    }
+    </script></body></html>
+    """)
+
+@app.route("/dashboard")
+def dashboard():
+    prod_html = "".join([f"<li><b>{p['nom']}</b> - {p['prix']} - {p['description']}</li>" for p in products])
+    return render_template_string(f"""
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>body{{font-family:Arial;padding:20px;background:#f5f5f5}}
+    input,textarea{{width:90%;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #ccc}}
+    button{{background:#0a1931;color:white;padding:12px 20px;border:none;border-radius:8px}}</style></head><body>
+    <h2>Dashboard Olivier</h2>
+    <h3>Produits actuels:</h3><ul>{prod_html}</ul>
+    <h3>Ajouter produit:</h3>
+    <form onsubmit="add(event)"><input id="nom" placeholder="Nom ex: Crème Lèvre Rose" required><br>
+    <input id="prix" placeholder="Prix ex: 3000F" required><br>
+    <textarea id="desc" placeholder="Description"></textarea><br>
+    <button type="submit">Ajouter</button></form>
+    <p><a href="/">Accueil</a> | <a href="/chat">Voir le chat</a></p>
+    <script>
+    async function add(e){{e.preventDefault();
+      let p={{nom:document.getElementById('nom').value,prix:document.getElementById('prix').value,description:document.getElementById('desc').value}};
+      await fetch('/api/products',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(p)}});
+      alert('Produit ajoute !'); location.reload();
+    }}
+    </script></body></html>
+    """)
+
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    msg = request.json.get("message","").lower()
+    for p in products:
+        if p['nom'].lower() in msg or "levre" in msg or "rose" in msg or "creme" in msg or "savon" in msg:
+            return jsonify({"reply": f"Oui j'ai <b>{p['nom']}</b> 😍<br>Prix: <b>{p['prix']}</b><br>{p['description']}<br><br>Tu veux commander ? Envoie ton quartier et numero WhatsApp, je livre a Ouaga aujourd'hui !"})
+    if "prix" in msg or "combien" in msg:
+        liste = "<br>".join([f"- {p['nom']}: {p['prix']}" for p in products])
+        return jsonify({"reply": f"Voici mes prix :<br>{liste}<br><br>Quel produit tu veux ?"})
+    if "bonjour" in msg or "salut" in msg:
+        return jsonify({"reply": "Salut ! C'est YAAM IA. Je vends des crèmes pour belles lèvres. Tu cherches quoi ?"})
+    return jsonify({"reply": f"Je vends : {', '.join([p['nom'] for p in products])}. Dis quel produit t'interesse et je te donne prix + livraison."})
+
+@app.route("/api/products", methods=["POST"])
+def api_add_product():
+    global products
+    data = request.json
+    new_id = max([p['id'] for p in products], default=0) + 1
+    products.append({"id": new_id, "nom": data['nom'], "prix": data['prix'], "description": data.get('description',''), "stock": "Dispo"})
+    save_products(products)
+    return jsonify({"ok": True})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
