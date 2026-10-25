@@ -154,6 +154,26 @@ def api_chat():
         reponse = f"Merci pour ton message : '{data.get('message')}'. Je suis YAAM IA BF, je vends Crème Lèvre Rose 3000F et Savon 2500F. Dis moi ce que tu veux, ou parle moi en vocal 🎤 ! Et contacte Olivier direct sur WhatsApp 65 39 95 53 pour commander."
 
     return jsonify({"reponse": reponse})
+# === YAAM SUR FACEBOOK COMME META AI ===
+VERIFY_TOKEN = "yaam_olivier_2026"
+
+@app.route('/webhook', methods=['GET'])
+def verify_fb():
+    token = request.args.get('hub.verify_token')
+    challenge = request.args.get('hub.challenge')
+    if token == VERIFY_TOKEN:
+        return challenge
+    return "Token invalide", 403
+
+@app.route('/webhook', methods=['POST'])
+def webhook_fb():
+    data = request.get_json()
+    print(f"Message Facebook: {data}")
+    return "OK", 200
+
+@app.route('/whatsapp', methods=['POST'])
+def whatsapp_webhook():
+    return jsonify({"reponse": "YAAM IA BF: Crème Lèvre Rose 3000F dispo ! 65 39 95 53"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
