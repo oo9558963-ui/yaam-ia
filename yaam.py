@@ -10,10 +10,6 @@ GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
-@app.get("/")
-async def home():
-    return {"status": "YAAM BF 3.8 LIVE"}
-
 @app.get("/webhook")
 async def verify(request: Request):
     c = request.query_params.get("hub.challenge")
@@ -22,22 +18,28 @@ async def verify(request: Request):
     return "Error"
 
 async def cerveau_yaam(text):
-    try:
-        resp = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=f"Tu es YAAM IA BF créée par Olivier Burkina. Réponds court 2-3 phrases max avec Ne y yibeogo, Laafi, Barka. Tu connais cuisine, beauté, mooré. Produit: Yaam Crème Lèvre Rose 3000F livraison Ouaga 1000F Bobo 1500F. Question: {text}"
-        )
-        return resp.text
-    except Exception as e:
-        # Si 2.5 plante, essaie 3.8
+    # LISTE DES NOMS QUI MARCHENT AVEC LES CLES AQ. EN 2026
+    modeles = [
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-2.0-flash-lite",
+        "gemini-2.5-flash-lite",
+        "gemini-pro-latest"
+    ]
+    for m in modeles:
         try:
+            print(f"ESSAI MODELE: {m}")
             resp = client.models.generate_content(
-                model="gemini-2.5-flash-preview-04-17",
-                contents=f"Tu es YAAM IA BF Burkina, réponds court avec Ne y yibeogo Laafi. Question: {text}"
+                model=m,
+                contents=f"Tu es YAAM IA BF créée par Olivier Burkina. Réponds court 2-3 phrases avec Ne y yibeogo, Laafi, Barka. Question: {text}"
             )
+            print(f"OK AVEC {m}")
             return resp.text
-        except Exception as e2:
-            return f"Ne y yibeogo ! Dernière erreur: {str(e2)[:300]}"
+        except Exception as e:
+            print(f"ECHEC {m}: {e}")
+            last_err = str(e)
+            continue
+    return f"Ne y yibeogo ! Tous les modèles échouent. Dernier: {last_err[:300]}"
 
 @app.post("/webhook")
 async def webhook(request: Request):
