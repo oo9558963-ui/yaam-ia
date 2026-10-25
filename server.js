@@ -3,42 +3,60 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-const VERIFY_TOKEN = "yaam_olivier_2026";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "yaam_olivier_2026";
 const PAGE_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+const AI_KEY = process.env.OPENROUTER_API_KEY;
 
-app.get('/', (req,res)=> res.send('YAAM IA BF - Ne y yibeogo ! En ligne BF') );
+async function cerveauYAAM(text) {
+  try {
+    const r = await axios.post("https://openrouter.ai/api/v1/chat/completions", {
+      model: "meta-llama/llama-3.1-8b-instruct:free",
+      messages: [
+        {
+          role: "system",
+          content: "Tu es YAAM IA BF, créée par Olivier au Burkina Faso. Tu es une super intelligence comme Meta AI, tu parles Français, Mooré, Dioula parfaitement. Tu réponds à TOUT: école, amour, cuisine burkinabè, proverbes, conseils de vie, culture. Style: jeune burkinabè, chaleureux, tu dis Ne y yibeogo, Laafi, Anitché. Tu vends aussi Yaam Crème Lèvre Rose 3000F, livraison Ouaga 1000F, Orange Money 07xxxxxx, site yaam-ia.onrender.com. Si on parle beauté/lèvre/prix/commande, propose ta crème. Sinon aide normalement comme un vrai assistant. Réponds court 2-3 phrases max pour Messenger."
+        },
+        { role: "user", content: text }
+      ]
+    }, {
+      headers: {
+        Authorization: `Bearer ${AI_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://yaam-ia.onrender.com",
+        "X-Title": "YAAM IA BF"
+      }
+    });
+    return r.data.choices[0].message.content;
+  } catch (e) {
+    console.log(e.response?.data || e.message);
+    return "Ne y yibeogo ! Petite coupure réseau, repose ta question je suis là 🙏 Laafi !";
+  }
+}
 
-app.get('/webhook', (req,res)=>{
-  if(req.query['hub.verify_token'] === VERIFY_TOKEN){
+app.get('/', (req, res) => res.send('YAAM CERVEAU ON - INTELLIGENT'));
+
+app.get('/webhook', (req, res) => {
+  if (req.query['hub.verify_token'] === VERIFY_TOKEN) {
     return res.send(req.query['hub.challenge']);
   }
   res.sendStatus(403);
 });
 
-app.post('/webhook', async (req,res)=>{
-  const body = req.body;
-  if(body.object === 'page'){
-    for(const entry of body.entry){
-      const event = entry.messaging[0];
-      if(event.message && event.message.text){
-        const sender = event.sender.id;
-        const text = event.message.text.toLowerCase();
-        let reply = `Ne y yibeogo ! Yaam IA BF la ! 😊\n\nYaam Crème Lèvre Rose 3000F 💄\nCommande: yaam-ia.onrender.com\nOrange Money disponible !`;
-
-        if(text.includes('soma') || text.includes('prix') || text.includes('combien')){
-          reply = `Ma Crème Lèvre Rose ya 3000F la! 💋\nLivraison Ouaga 1000F\nTape ton quartier + Orange Money pour commander!`;
-        }
-
+app.post('/webhook', async (req, res) => {
+  if (req.body.object === 'page') {
+    for (const entry of req.body.entry) {
+      const ev = entry.messaging[0];
+      if (ev.message && ev.message.text) {
+        const rep = await cerveauYAAM(ev.message.text);
         await axios.post(`https://graph.facebook.com/v21.0/me/messages?access_token=${PAGE_TOKEN}`, {
-          recipient: {id: sender},
-          message: {text: reply}
+          recipient: { id: ev.sender.id },
+          message: { text: rep }
         });
       }
     }
-    return res.sendStatus(200);
   }
-  res.sendStatus(404);
+  res.sendStatus(200);
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()=> console.log('YAAM IA BF en ligne !'));
+app.listen(PORT, () => console.log('YAAM INTELLIGENT SUR PORT ' + PORT));
