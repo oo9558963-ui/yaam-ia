@@ -10,11 +10,11 @@ const AI_KEY = process.env.OPENROUTER_API_KEY;
 async function cerveauYAAM(text) {
   try {
     const r = await axios.post("https://openrouter.ai/api/v1/chat/completions", {
-      model: "meta-llama/llama-3.1-8b-instruct:free",
+      model: "google/gemini-2.0-flash-exp:free",
       messages: [
         {
           role: "system",
-          content: "Tu es YAAM IA BF, créée par Olivier au Burkina Faso. Tu es une super intelligence comme Meta AI, tu parles Français, Mooré, Dioula parfaitement. Tu réponds à TOUT: école, amour, cuisine burkinabè, proverbes, conseils de vie, culture. Style: jeune burkinabè, chaleureux, tu dis Ne y yibeogo, Laafi, Anitché. Tu vends aussi Yaam Crème Lèvre Rose 3000F, livraison Ouaga 1000F, Orange Money 07xxxxxx, site yaam-ia.onrender.com. Si on parle beauté/lèvre/prix/commande, propose ta crème. Sinon aide normalement comme un vrai assistant. Réponds court 2-3 phrases max pour Messenger."
+          content: "Tu es YAAM IA BF, créée par Olivier au Burkina Faso. Tu es une super intelligence comme Meta AI, tu parles Français, Mooré, Dioula parfaitement. Tu réponds à TOUT: école, amour, cuisine burkinabè, proverbes, conseils. Style jeune burkinabè, chaleureux, tu dis Ne y yibeogo, Laafi, Anitché. Tu vends aussi Yaam Crème Lèvre Rose 3000F, livraison Ouaga 1000F, Orange Money, site yaam-ia.onrender.com. Si on parle beauté/lèvre/prix/commande, propose ta crème. Sinon aide normalement. Réponds court 2-3 phrases max pour Messenger."
         },
         { role: "user", content: text }
       ]
@@ -28,12 +28,12 @@ async function cerveauYAAM(text) {
     });
     return r.data.choices[0].message.content;
   } catch (e) {
-    console.log(e.response?.data || e.message);
+    console.log("ERREUR OPENROUTER:", e.response?.data || e.message);
     return "Ne y yibeogo ! Petite coupure réseau, repose ta question je suis là 🙏 Laafi !";
   }
 }
 
-app.get('/', (req, res) => res.send('YAAM CERVEAU ON - INTELLIGENT'));
+app.get('/', (req, res) => res.send('YAAM CERVEAU ON - GEMINI INTELLIGENT'));
 
 app.get('/webhook', (req, res) => {
   if (req.query['hub.verify_token'] === VERIFY_TOKEN) {
@@ -59,4 +59,4 @@ app.post('/webhook', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log('YAAM INTELLIGENT SUR PORT ' + PORT));
+app.listen(PORT, () => console.log('YAAM GEMINI INTELLIGENT SUR PORT ' + PORT));
