@@ -4,12 +4,15 @@ import httpx
 from google import genai
 
 app = FastAPI()
-
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "yaam_olivier_2026")
 PAGE_TOKEN = os.getenv("PAGE_ACCESS_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
+
+@app.get("/")
+async def home():
+    return {"status": "YAAM BF 3.8 LIVE"}
 
 @app.get("/webhook")
 async def verify(request: Request):
@@ -19,25 +22,22 @@ async def verify(request: Request):
     return "Error"
 
 async def cerveau_yaam(text):
-    if not client:
-        return "Pas de client AQ"
     try:
-        # LISTE LES MODELES DISPO POUR TA CLE AQ
-        models = client.models.list()
-        liste = [m.name for m in models]
-        print(f"MODELES DISPO: {liste}")
-
-        # ESSAI LE PREMIER MODELE DISPO
         resp = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=f"Tu es YAAM IA BF Burkina, réponds court avec Ne y yibeogo, Laafi. Question: {text}"
+            model="gemini-2.5-flash",
+            contents=f"Tu es YAAM IA BF créée par Olivier Burkina. Réponds court 2-3 phrases max avec Ne y yibeogo, Laafi, Barka. Tu connais cuisine, beauté, mooré. Produit: Yaam Crème Lèvre Rose 3000F livraison Ouaga 1000F Bobo 1500F. Question: {text}"
         )
         return resp.text
     except Exception as e:
-        # ICI ON AFFICHE LA VRAIE ERREUR DANS MESSENGER
-        err = str(e)[:500]
-        print(f"ERREUR COMPLETE: {err}")
-        return f"ERREUR DEBUG: {err}"
+        # Si 2.5 plante, essaie 3.8
+        try:
+            resp = client.models.generate_content(
+                model="gemini-2.5-flash-preview-04-17",
+                contents=f"Tu es YAAM IA BF Burkina, réponds court avec Ne y yibeogo Laafi. Question: {text}"
+            )
+            return resp.text
+        except Exception as e2:
+            return f"Ne y yibeogo ! Dernière erreur: {str(e2)[:300]}"
 
 @app.post("/webhook")
 async def webhook(request: Request):
