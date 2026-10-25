@@ -5,58 +5,53 @@ app.use(express.json());
 
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "yaam_olivier_2026";
 const PAGE_TOKEN = process.env.PAGE_ACCESS_TOKEN;
-const AI_KEY = process.env.OPENROUTER_API_KEY;
+const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
 async function cerveauYAAM(text) {
+  console.log("Question reçue:", text);
+  console.log("Clé Gemini présente:", GEMINI_KEY ? "OUI " + GEMINI_KEY.substring(0,10) + "..." : "NON");
+  
   try {
-    const r = await axios.post("https://openrouter.ai/api/v1/chat/completions", {
-      model: "google/gemini-2.0-flash-exp:free",
-      messages: [
-        {
-          role: "system",
-          content: "Tu es YAAM IA BF, créée par Olivier au Burkina Faso. Tu es une super intelligence comme Meta AI, tu parles Français, Mooré, Dioula parfaitement. Tu réponds à TOUT: école, amour, cuisine burkinabè, proverbes, conseils. Style jeune burkinabè, chaleureux, tu dis Ne y yibeogo, Laafi, Anitché. Tu vends aussi Yaam Crème Lèvre Rose 3000F, livraison Ouaga 1000F, Orange Money, site yaam-ia.onrender.com. Si on parle beauté/lèvre/prix/commande, propose ta crème. Sinon aide normalement. Réponds court 2-3 phrases max pour Messenger."
-        },
-        { role: "user", content: text }
-      ]
-    }, {
-      headers: {
-        Authorization: `Bearer ${AI_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://yaam-ia.onrender.com",
-        "X-Title": "YAAM IA BF"
-      }
-    });
-    return r.data.choices[0].message.content;
+    if (!GEMINI_KEY) throw new Error("Pas de GEMINI_API_KEY sur Render");
+    
+    // NOUVEAU ENDPOINT QUI MARCHE AVEC LES CLES AQ...
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+    
+    const r = await axios.post(url, {
+      contents: [{ parts: [{ text: `Tu es YAAM IA BF, créée par Olivier au Burkina Faso. Tu es une IA burkinabè chaleureuse. Parle Français, Mooré, Dioula. Réponds en 2-3 phrases courtes, avec Ne y yibeogo, Laafi, Anitché. Si on parle beauté/lèvres/prix, vends Yaam Crème Lèvre Rose 3000F livraison Ouaga 1000F. Question de l'utilisateur: ${text}` }] }]
+    }, { timeout: 15000 });
+
+    const rep = r.data.candidates[0].content.parts[0].text;
+    console.log("Réponse Gemini:", rep);
+    return rep;
+
   } catch (e) {
-    console.log("ERREUR OPENROUTER:", e.response?.data || e.message);
-    return "Ne y yibeogo ! Petite coupure réseau, repose ta question je suis là 🙏 Laafi !";
+    console.log("ERREUR GEMINI DETAIL:", JSON.stringify(e.response?.data || e.message, null, 2));
+    // Message temporaire pour voir l'erreur, après on remettra joli
+    if (e.response?.data?.error?.message) {
+      return "Erreur technique: " + e.response.data.error.message + " | Je suis YAAM, repose ta question Laafi !";
+    }
+    return "Ne y yibeogo ! Laafi bala ? 😊 Je suis YAAM IA BF, ton assistante burkinabè ! J'ai reçu: '" + text + "' Dis-moi ce que tu veux !";
   }
 }
 
-app.get('/', (req, res) => res.send('YAAM CERVEAU ON - GEMINI INTELLIGENT'));
-
+app.get('/', (req, res) => res.send('YAAM GEMINI V2 ON - ' + new Date()));
 app.get('/webhook', (req, res) => {
-  if (req.query['hub.verify_token'] === VERIFY_TOKEN) {
-    return res.send(req.query['hub.challenge']);
-  }
+  if (req.query['hub.verify_token'] === VERIFY_TOKEN) return res.send(req.query['hub.challenge']);
   res.sendStatus(403);
 });
-
 app.post('/webhook', async (req, res) => {
   if (req.body.object === 'page') {
     for (const entry of req.body.entry) {
       const ev = entry.messaging[0];
-      if (ev.message && ev.message.text) {
+      if (ev.message?.text) {
         const rep = await cerveauYAAM(ev.message.text);
         await axios.post(`https://graph.facebook.com/v21.0/me/messages?access_token=${PAGE_TOKEN}`, {
-          recipient: { id: ev.sender.id },
-          message: { text: rep }
+          recipient: { id: ev.sender.id }, message: { text: rep }
         });
       }
     }
   }
   res.sendStatus(200);
 });
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log('YAAM GEMINI INTELLIGENT SUR PORT ' + PORT));
+app.listen(process.env.PORT || 10000, () => console.log('YAAM GEMINI V2 OK'));
